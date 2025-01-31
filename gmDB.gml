@@ -63,8 +63,6 @@ function gmDB () constructor {
                     }
                 }
 
-                // Type of input does not match expected type
-                // and the input exists while the field is not nullable
                 if (!_expected.nullable && is_undefined(_input)) {
                     return false;
                 }
@@ -104,14 +102,27 @@ function gmDB () constructor {
                 array_push(_return, _entry);
             }
 
-            return _return;
+            return new self.result (_return);
         }
 
-        toString = function () {
-            return json_stringify({
-                definition: self.definition,
-                rows: self.rows
-            });
+        result = function (_res = []) constructor
+        {
+            result = _res;
+
+            where = function (conditions = []) {
+                for(var _i = 0; _i < array_length(conditions); _i++) {
+                    var _filtered = [];
+                    for(var _r = 0; _r < array_length(self.result); _r++) {
+                        var _val = conditions[_i](self.result[_r]);
+                        if (_val) {
+                            array_push(_filtered, self.result[_r]);
+                        }
+                    }
+                    self.result = _filtered;
+                }
+
+                return self;
+            }
         }
     }
 
