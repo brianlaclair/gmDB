@@ -1,16 +1,17 @@
 // gmDB
-// Version: WIP
+// Version: WIP ( 2025.02.02 rev1 )
 // Author: Brian LaClair
 // License: MIT
 
 /**
 * Creates a new gmDB instance.
+* 
 * @return {Struct.gmDB}
 */
 function gmDB () constructor {
     
-    store = {};
-    
+    store   = {};
+
     /**
     * Dumps the current database store to a JSON string.
     * @return {String} JSON string representing the database.
@@ -158,10 +159,13 @@ function gmDB () constructor {
             * Filters the result set using provided condition functions. 
             *
             * @function
-            * @param {Array.<Function>} [conditions=[]] Array of functions that return a boolean.
-            * @return {Struct} The result object after filtering.
+            * @param {Array.<Function>|Function} [conditions] A single function, or an Array of functions that each return a boolean.
+            * @return {Struct.gmDB$$table$$result} The result object after filtering.
             */
-            where = function (conditions = []) {
+            where = function (conditions) {
+                if (!is_array(conditions)) {
+                    conditions = [conditions];
+                }
                 var conditionsLength = array_length(conditions);
                 for (var i = 0; i < conditionsLength; i++) {
                     var filtered = [];
@@ -179,7 +183,7 @@ function gmDB () constructor {
             /**
             * Removes (deletes) the rows in the result set from the parent table.
             *
-            * @function
+            * @function 
             * @return {Struct.gmDB$$table$$result} The result object after deletion.
             */
             remove = function() {
@@ -246,9 +250,10 @@ function gmDB () constructor {
             };
 
             /**
-            * Returns the number of rows in the result set.
+            * Returns a read-only array of the current result set
             *
-            * @function
+            * @function getResult(...) 
+            * @param {String} [columns...]     
             * @return {Array<Struct>} The count of rows.
             */
             getResult = function() { 
