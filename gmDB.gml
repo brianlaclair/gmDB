@@ -224,6 +224,10 @@ function gmDB () constructor {
                             continue;
                         }
 
+                        if (typeof(newVal) == "method") {
+                            newVal = method_call(newVal, [row]);
+                        }
+
                         var nullable = struct_get(fieldDef, "nullable");
                         nullable = is_undefined(nullable) ? true : nullable;
                         
