@@ -13,42 +13,53 @@ function gmDB () constructor {
     store   = {};
 
     /**
-    * Dumps the current database store to a JSON string.
+    * Returns the current database store as a JSON string.
     * @return {String} JSON string representing the database.
     */
-    dump = function() {
+    save = function() {
         return json_stringify(self.store);
     }
     
     /**
-    * Loads a dumped database from a JSON string.
+    * Loads a database from a JSON string.
     * Reconstructs tables and their rows.
     *
-    * @param {String} dumpedDb - JSON string representing a dumped database.
+    * @param {String} dbBlob - JSON string representing a dumped database.
+    * @param {Bool} [loadConfig=false] - Use the input to construct the table definitions.
     * @return {Bool} True if loading was successful, false otherwise.
     */
-    load = function(dumpedDb) {
+    load = function(dbBlob, loadConfig = false) {
         var parsed;
         try {
-            parsed = json_parse(dumpedDb);
-        } catch(e) {
+            parsed = json_parse(dbBlob);
+        } catch(e) { 
             return false;
         }
         
-        self.store = {};
-        
+        if (loadConfig) {
+            self.store = {};
+        }
+
         var tableNames = struct_get_names(parsed);
 
         for (var _i = 0; _i < array_length(tableNames); _i++) {
             if (variable_struct_exists(parsed, tableNames[_i])) {
                 var tableData = struct_get(parsed, tableNames[_i]);
-                
-                var newTable = new self.table(tableData.definition, tableData.rows);
-                struct_set(self.store, tableNames[_i], newTable);
+
+                if (loadConfig) {
+                    var newTable = new self.table(tableData.definition, tableData.rows);
+                    struct_set(self.store, tableNames[_i], newTable);
+                } else if (struct_exists(self.store, tableNames[_i])) {
+                    var newTable = struct_get(self.store, tableNames[_i]);
+                    struct_set(self.store, tableNames[_i].rows, tableData.rows);
+                }
             }
         }
+
+        show_debug_message(self.save());
+
         return true;
-    };
+    }
 
     /**
     * Creates a new table object.
@@ -121,7 +132,7 @@ function gmDB () constructor {
 
             array_push(self.rows, newRow);
             return true;
-        };
+        }
 
         /**
         * Selects rows from the table.
@@ -132,7 +143,7 @@ function gmDB () constructor {
         */
         __select = function () {
             return new self.result(self.rows, self);
-        };
+        }
 
         /**
         * Constructs a result set from a table query.
@@ -150,7 +161,7 @@ function gmDB () constructor {
             result          = _res;
 
             /** 
-            * Reference to the parent table from which this result was generated. 
+            * Reference to the parent table from which this result set was generated. 
             * @type {table} 
             */
             parentTable     = _parentTable;
@@ -178,7 +189,7 @@ function gmDB () constructor {
                     self.result = filtered;
                 }
                 return self;
-            };
+            }
 
             /**
             * Removes (deletes) the rows in the result set from the parent table.
@@ -202,7 +213,7 @@ function gmDB () constructor {
                 }
                 self.result = [];
                 return self;
-            };
+            }
 
             /**
             * Updates the rows in the result set with new values.
@@ -296,9 +307,9 @@ function gmDB () constructor {
                     count = array_length(self.result);
                 }
                 return count;
-            };
-        };
-    };
+            }
+        }
+    }
 
     /**
     * Creates a new table in the database.
@@ -325,7 +336,7 @@ function gmDB () constructor {
     */
     exists = function (table) {
         return struct_exists(self.store, table);
-    };
+    }
 
     /**
     * Inserts a row into a specified table.
@@ -341,7 +352,7 @@ function gmDB () constructor {
             return false;
         }
         return tablePointer.__insert(row);
-    };
+    }
     
     /**
     * Selects rows from a specified table.
@@ -354,6 +365,6 @@ function gmDB () constructor {
         if (self.exists(table)) {
             return struct_get(self.store, table).__select();
         }
-    };
+    }
 
 }
