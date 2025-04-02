@@ -32,7 +32,7 @@ function gmDB () constructor {
         var parsed;
         try {
             parsed = json_parse(dbBlob);
-        } catch(e) { 
+        } catch(e) {
             return false;
         }
         
@@ -50,8 +50,7 @@ function gmDB () constructor {
                     var newTable = new self.table(tableData.definition, tableData.rows);
                     struct_set(self.store, tableNames[_i], newTable);
                 } else if (struct_exists(self.store, tableNames[_i])) {
-                    var newTable = struct_get(self.store, tableNames[_i]);
-                    struct_set(self.store, tableNames[_i].rows, tableData.rows);
+                    struct_set(self.store, tableNames[_i], tableData.rows);
                 }
             }
         }
