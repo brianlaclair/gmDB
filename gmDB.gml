@@ -1,5 +1,5 @@
 // gmDB
-// Version: WIP ( 2025.02.02 rev1 )
+// Version: 1.0 ( 2025.04.03 )
 // Author: Brian LaClair
 // License: MIT
 
@@ -50,12 +50,13 @@ function gmDB () constructor {
                     var newTable = new self.table(tableData.definition, tableData.rows);
                     struct_set(self.store, tableNames[_i], newTable);
                 } else if (struct_exists(self.store, tableNames[_i])) {
-                    struct_set(self.store, tableNames[_i], tableData.rows);
+					struct_get(self.store, tableNames[_i]).rows = [];
+					for (var _rows = 0; _rows < array_length(tableData.rows); _rows++) {
+						array_push(struct_get(self.store, tableNames[_i]).rows, tableData.rows[_rows]);	
+					}
                 }
             }
         }
-
-        show_debug_message(self.save());
 
         return true;
     }
