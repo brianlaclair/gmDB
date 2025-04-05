@@ -265,7 +265,7 @@ function gmDB () constructor {
             *
             * @function getResult(...) 
             * @param {String} [columns...]     
-            * @return {Array<Struct>} The count of rows.
+            * @return {Array<Struct>} Read-only version of result set.
             */
             getResult = function() { 
                 var _return   = [];

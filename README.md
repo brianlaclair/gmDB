@@ -1,92 +1,157 @@
-# gmDB
+# gmDB 🗃️
 
-**Version:** WIP  
+A lightweight, fast, in-memory, and schema-aware database for [GameMaker](https://gamemaker.io/) projects.  
+Simple, flexible, and powerful enough for saving structured game data, implementing local queries, or building prototype data systems.
+
+**Version:** 1.0  
 **Author:** Brian LaClair  
-**License:** MIT
+**License:** [MIT](LICENSE)
 
-## Warning
 
-gmDB is very much a work-in-progress. While the documentation below covers it's current capabilities, you should expect that breaking changes will occur often as development continues.
-There are big ticket items that are currently completely missing, primarily:
+## ✨ Features
 
-- **WHERE**: Missing clause
-- **UPDATE/SET**: Missing clause
-- **JOIN**: Missing clause
-- **Dump / Load**: The state of any gmDB should be dump-able and re-load-able
-- **SQL**: All features should be accessible through SQL queries
+- Create multiple named tables with strict schemas
+- Insert, query, update, and remove rows
+- Save and load database state as JSON
+- Chainable, expressive query API
+- Auto-increment fields and default callbacks
+- 100% native GameMaker code – no extensions or dependencies
 
-To that end, it would be advisable to avoid using this code in it's current state for anything beyond tinkering and/or contributing to the project.
 
-## Overview
+## 🚀 Getting Started
 
-gmDB is a lightweight, in-memory database system for GameMaker, designed to provide structured data storage and retrieval capabilities within GameMaker projects. It allows for the creation of tables with defined schemas, insertion of structured data, and basic querying capabilities.
-
-## Features
-
-- **Table Creation**: Define tables with structured fields and constraints.
-- **Row Insertion**: Supports type validation, auto-increment fields, and nullable constraints.
-- **Data Selection**: Retrieve specific columns from stored records.
-- **In-Memory Storage**: Keeps all data within a structured format for fast access.
-
-## Installation
-
-To use `gmDB` in your GameMaker project:
-
-1. Copy the `gmDB` script into your GameMaker project.
-2. Create an instance of `gmDB` in your game object.
+### ✅ Create a new database
 
 ```gml
-var database = new gmDB();
+var db = new gmDB();
 ```
 
-## Usage
-
-### Creating a Table
-To create a table with a specific schema:
+### 📄 Define and create a table
 
 ```gml
-database.create("players", {
-    id: { type: "number", auto_increment: true },
+var playerTable = {
+    id: { type: "number", auto_increment: true, nullable: false },
     name: { type: "string", nullable: false },
     score: { type: "number", nullable: false }
+};
+
+db.create("players", playerTable);
+```
+
+### ➕ Insert rows
+
+```gml
+db.insert("players", { name: "Alice", score: 1200 });
+db.insert("players", { name: "Bob", score: 980 });
+```
+
+### 🔍 Query rows
+
+```gml
+var result = db.select("players").where(function(row) {
+    return row.score > 1000;
 });
+
+show_debug_message("High scorers: " + string(result.getSize()));
 ```
 
-### Inserting Data
-To insert a new row into a table:
+### ✏️ Update rows
 
 ```gml
-database.insert("players", {
-    name: "Alice",
-    score: 1200
-});
+result.update({ score: function(row) { return row.score + 100; } });
 ```
 
-### Selecting Data
-Retrieve all rows and specific columns:
+### ❌ Delete rows
 
 ```gml
-var all_players = database.select("players");
-var player_scores = database.select("players", ["name", "score"]);
+result.remove();
 ```
 
-### Checking if a Table Exists
+### 💾 Save & Load
 
 ```gml
-if (database.exists("players")) {
-    show_debug_message("Table exists!");
+var saveData = db.save(); // returns a JSON string
+// Save to file or buffer
+
+db.load(saveData); // Load from a previously saved string
+```
+
+---
+
+## 🧠 Table Schema Notes
+
+Each field in a table schema is an object with:
+- `type`: `"number"`, `"string"`, [and many more](https://manual.gamemaker.io/monthly/en/#t=GameMaker_Language%2FGML_Reference%2FVariable_Functions%2Ftypeof.htm)
+- `nullable`: (optional, default `true`)
+- `auto_increment`: (optional, for numeric fields)
+- `callback`: (optional, function returning a default value)
+
+Example:
+
+```gml
+{
+    name: { type: "string", nullable: false },
+    score: { type: "number", auto_increment: false, nullable: false },
+    created_at: { type: "string", callback: function() { return date_time_string(); } }
 }
 ```
 
-## License
+## 🛠 API Reference
 
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
+### Database (`gmDB`)
+| Method | Description |
+|--------|-------------|
+| `create(name, definition)` | Creates a new table |
+| `exists(name)` | Returns `true` if the table exists |
+| `insert(name, row)` | Inserts a row into a table |
+| `select(name)` | Selects rows from a table |
+| `save()` | Returns the entire DB as JSON |
+| `load(json, loadConfig)` | Loads JSON into the DB (optional `loadConfig`) |
 
-## Contributing
+### Query Result
+Returned from `db.select(table)`
 
-Contributions are welcome! If you find any bugs or have suggestions for improvements, feel free to open an issue or submit a pull request.
+| Method | Description |
+|--------|-------------|
+| `where(fn)` | Filters rows using a function or array of functions |
+| `update(struct)` | Updates fields for all rows in the result |
+| `remove()` | Deletes matching rows from the parent table |
+| `getResult(columns...)` | Returns matching rows (optionally filtered to specific columns, denoted by infinite string parameters) |
+| `getSize()` | Returns the number of matched rows |
 
-## Acknowledgments
 
-Developed by Brian LaClair.
+## 📦 Use Cases
 
+- In-memory data structures for player data, enemies, or levels
+- Save/load state to disk or cloud
+- Powerful use cases in server-side GameMaker applications
+- Replace spreadsheets for test-level configs
+- Modding APIs with user-editable structured data
+
+
+## 📚 Example
+
+```gml
+var db = new gmDB();
+
+db.create("inventory", {
+    id: { type: "number", auto_increment: true, nullable: false },
+    item: { type: "string", nullable: false },
+    qty: { type: "number", nullable: false }
+});
+
+db.insert("inventory", { item: "Potion", qty: 5 });
+db.insert("inventory", { item: "Elixir", qty: 2 });
+
+var potions = db.select("inventory").where(function(row) {
+    return row.item == "Potion";
+});
+
+potions.update({ qty: function(row) { return row.qty + 1; } });
+
+show_debug_message(potions.getResult()); // [{"id":0,"item":"Potion","qty":6}]
+```
+
+---
+
+gmDB is a work-in-progress - please feel free to create an Issue or open a Pull Request if you'd like to contribute!
