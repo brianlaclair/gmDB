@@ -1,7 +1,6 @@
 # gmDB 🗃️
 
 A lightweight, fast, in-memory, and schema-aware database for [GameMaker](https://gamemaker.io/) projects.  
-Simple, flexible, and powerful enough for saving structured game data, implementing local queries, or building prototype data systems.
 
 **Version:** 1.0  
 **Author:** Brian LaClair  
