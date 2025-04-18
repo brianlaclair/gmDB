@@ -1,7 +1,63 @@
 // gmDB
 // Version: 1.0 ( 2025.04.03 )
-// Author: Brian LaClair
+// Author: Brian LaClair, Shortbread
 // License: MIT
+
+#region Define Data Types
+
+	enum gmDB_type {
+		number,
+		string,
+		array,
+		bool,
+		int32,
+		int64,
+		ptr,
+		undefined,
+		method,
+		struct,
+		object,
+		sprite,
+		room,
+		path,
+		shader,
+		sequence,
+		particle_system,
+		sound,
+		tileset,
+		timeline,
+		animcurve,
+		font,
+		instance,
+	}
+
+	// Store list of types and their names
+	global.__gmdb_type_list = [];
+	global.__gmdb_type_list[gmDB_type.number] = "number";
+	global.__gmdb_type_list[gmDB_type.string] = "string";
+	global.__gmdb_type_list[gmDB_type.array] = "array";
+	global.__gmdb_type_list[gmDB_type.bool] = "bool";
+	global.__gmdb_type_list[gmDB_type.int32] = "int32";
+	global.__gmdb_type_list[gmDB_type.int64] = "int64";
+	global.__gmdb_type_list[gmDB_type.ptr] = "ptr";
+	global.__gmdb_type_list[gmDB_type.undefined] = "undefined";
+	global.__gmdb_type_list[gmDB_type.method] = "method";
+	global.__gmdb_type_list[gmDB_type.struct] = "struct";
+	global.__gmdb_type_list[gmDB_type.object] = "object";
+	global.__gmdb_type_list[gmDB_type.sprite] = "sprite";
+	global.__gmdb_type_list[gmDB_type.room] = "room";
+	global.__gmdb_type_list[gmDB_type.path] = "path";
+	global.__gmdb_type_list[gmDB_type.shader] = "shader";
+	global.__gmdb_type_list[gmDB_type.sequence] = "sequence";
+	global.__gmdb_type_list[gmDB_type.particle_system] = "particle_system_resource";
+	global.__gmdb_type_list[gmDB_type.sound] = "sound";
+	global.__gmdb_type_list[gmDB_type.tileset] = "tileset";
+	global.__gmdb_type_list[gmDB_type.timeline] = "timeline";
+	global.__gmdb_type_list[gmDB_type.animcurve] = "animcurve";
+	global.__gmdb_type_list[gmDB_type.font] = "font";
+	global.__gmdb_type_list[gmDB_type.instance] = "instance";
+
+#endregion
 
 /**
 * Creates a new gmDB instance.
@@ -9,14 +65,29 @@
 * @return {Struct.gmDB}
 */
 function gmDB () constructor {
-    
-    store   = {};
+	
+    store = {};
+	
+	/**
+	* Returns the type of the value given using gmDB_type enum values
+	* @return {enum.gmDB_type} gmDB_type enum
+	*/
+	static __get_type = function(_value) {
+		var _type_string;
+		if (is_handle(_value)) {
+			var _handle_str = string(_value);
+			_type_string = string_copy(_handle_str, 5, string_pos_ext(" ",_handle_str,5) - 5);
+		} else {
+			_type_string = typeof(_value);
+		}
+		return array_get_index(global.__gmdb_type_list, _type_string);
+	}
 
     /**
     * Returns the current database store as a JSON string.
     * @return {String} JSON string representing the database.
     */
-    save = function() {
+    static save = function() {
         return json_stringify(self.store);
     }
     
@@ -28,15 +99,15 @@ function gmDB () constructor {
     * @param {Bool} [loadConfig=false] - Use the input to construct the table definitions.
     * @return {Bool} True if loading was successful, false otherwise.
     */
-    load = function(dbBlob, loadConfig = false) {
+    static load = function(_dbBlob, _loadConfig = false) {
         var parsed;
         try {
-            parsed = json_parse(dbBlob);
+            parsed = json_parse(_dbBlob);
         } catch(e) {
             return false;
         }
         
-        if (loadConfig) {
+        if (_loadConfig) {
             self.store = {};
         }
 
@@ -46,7 +117,7 @@ function gmDB () constructor {
             if (variable_struct_exists(parsed, tableNames[_i])) {
                 var tableData = struct_get(parsed, tableNames[_i]);
 
-                if (loadConfig) {
+                if (_loadConfig) {
                     var newTable = new self.table(tableData.definition, tableData.rows);
                     struct_set(self.store, tableNames[_i], newTable);
                 } else if (struct_exists(self.store, tableNames[_i])) {
@@ -68,7 +139,7 @@ function gmDB () constructor {
     * @param {Struct} [_definition={}] The table definition.
     * @param {Array} [_rows=[]] The initial rows for the table.
     */
-    table = function (_definition = {}, _rows = []) constructor {
+    static table = function (_definition = {}, _rows = []) constructor {
         /**
         * The table definition object.
         * @type {Object}
@@ -91,43 +162,36 @@ function gmDB () constructor {
         * @param {Struct} row - The row data to insert.
         * @return {Bool} True if insertion was successful, false otherwise.
         */
-        __insert = function(row) {
-            if (!is_struct(row)) {
+        static __insert = function(_row) {
+            if (!is_struct(_row)) {
                 return false;
             }
 
             var newRow = {};
         
             for (var i = 0; i < self.__definitionCount; i++) {
-                var fieldName = self.__definitionArray[i];
-                var inputValue   = struct_get(row, fieldName);
-                var fieldDef     = struct_get(self.definition, fieldName);
-                
-                var nullable     = struct_get(fieldDef, "nullable");
-                nullable         = is_undefined(nullable) ? true : nullable;
+                var fieldName	= self.__definitionArray[i];
+                var inputValue  = struct_get(_row, fieldName);
+                var fieldDef    = struct_get(self.definition, fieldName);
+                var nullable    = struct_get(fieldDef, "nullable") ?? true;
         
                 if (is_undefined(inputValue) && variable_struct_exists(fieldDef, "callback")) {
                     inputValue = method_call(fieldDef.callback); 
                 }
 
-                if (is_undefined(inputValue) && variable_struct_exists(fieldDef, "auto_increment") && fieldDef.type == "number" && fieldDef.auto_increment)
-                {
+                if (is_undefined(inputValue) && variable_struct_exists(fieldDef, "auto_increment") && fieldDef.type == gmDB_type.number && fieldDef.auto_increment) {
                     inputValue = 0;
                     if (array_length(self.rows)) {
                         var lastRowValue = struct_get(array_last(self.rows), fieldName);
                         inputValue = lastRowValue + 1;
                     }
                 }
-        
-                if (!nullable && is_undefined(inputValue)) {
-                    return false;
-                }
-        
-                if (!nullable && typeof(inputValue) != fieldDef.type) {
-                    return false;
-                }
-        
-                struct_set(newRow, fieldName, inputValue);
+				
+				if ((nullable && is_undefined(inputValue)) || (gmDB.__get_type(inputValue) == fieldDef.type)) {
+					struct_set(newRow, fieldName, inputValue);
+				} else {
+					return false;
+				}
             }
 
             array_push(self.rows, newRow);
@@ -141,7 +205,7 @@ function gmDB () constructor {
         * @private
         * @return {Struct} A result object containing the table's rows.
         */
-        __select = function () {
+        static __select = function () {
             return new self.result(self.rows, self);
         }
 
@@ -153,7 +217,7 @@ function gmDB () constructor {
         * @param {Struct} [_parentTable=undefined] Reference to the parent table. 
         * @returns {Struct}
         */
-        result = function (_res = [], _parentTable = undefined) constructor {
+        static result = function (_res = [], _parentTable = undefined) constructor {
             /**
             * The array of rows in the result set.
             * @type {Array}
@@ -173,7 +237,7 @@ function gmDB () constructor {
             * @param {Array.<Function>|Function} [conditions] A single function, or an Array of functions that each return a boolean.
             * @return {Struct.gmDB$$table$$result} The result object after filtering.
             */
-            where = function (conditions) {
+            static where = function (conditions) {
                 if (!is_array(conditions)) {
                     conditions = [conditions];
                 }
@@ -197,7 +261,7 @@ function gmDB () constructor {
             * @function 
             * @return {Struct.gmDB$$table$$result} The result object after deletion.
             */
-            remove = function() {
+            static remove = function() {
                 var resLength = array_length(self.result);
                 for (var i = 0; i < resLength; i++) {
                     var rowToDelete = self.result[i];
@@ -222,7 +286,7 @@ function gmDB () constructor {
             * @param {Struct} updateData - Object with keys and their new values.
             * @return {Struct.gmDB$$table$$result} The result object after updating.
             */
-            update = function (updateData) {
+            static update = function (updateData) {
                 var tableDef    = parentTable.definition;
                 var keys        = struct_get_names(updateData);
                 var numKeys     = array_length(keys);
@@ -243,18 +307,13 @@ function gmDB () constructor {
                             newVal = method_call(newVal, [row]);
                         }
 
-                        var nullable = struct_get(fieldDef, "nullable");
-                        nullable = is_undefined(nullable) ? true : nullable;
-                        
-                        if (!nullable && is_undefined(newVal)) {
-                            continue;
-                        }
-                        
-                        if (!nullable && typeof(newVal) != fieldDef.type) {
-                            continue;
-                        }
-                        
-                        struct_set(row, key, newVal);
+                        var nullable = struct_get(fieldDef, "nullable") ?? true;
+						
+						if ((nullable && is_undefined(newVal)) || (gmDB.__get_type(newVal) == fieldDef.type)) {
+							struct_set(row, key, newVal);
+						} else {
+							continue;
+						}
                     }
                 }
                 return self;
@@ -267,7 +326,7 @@ function gmDB () constructor {
             * @param {String} [columns...]     
             * @return {Array<Struct>} Read-only version of result set.
             */
-            getResult = function() { 
+            static getResult = function() { 
                 var _return   = [];
                 var _itemKeys = [];
                 var itemCount = argument_count;
@@ -301,12 +360,8 @@ function gmDB () constructor {
             * @function
             * @return {Real} The count of rows.
             */
-            getSize = function () {
-                var count = 0;
-                if (is_array(self.result)) {
-                    count = array_length(self.result);
-                }
-                return count;
+            static getSize = function () {
+                return is_array(self.result) ? array_length(self.result) : 0;
             }
         }
     }
@@ -319,11 +374,11 @@ function gmDB () constructor {
     * @param {Struct} [definition={}] The table definition.
     * @return {Bool} True if the table was created, false if it already exists.
     */
-    create = function (table, definition = {}) {
-        if (!is_undefined(struct_get(self.store, table))) {
+    static create = function (_table, _definition = {}) {
+        if (!is_undefined(struct_get(self.store, _table))) {
             return false;
         }
-        struct_set(self.store, table, new self.table(definition));
+        struct_set(self.store, _table, new self.table(_definition));
         return true;
     }
  
@@ -334,8 +389,8 @@ function gmDB () constructor {
     * @param {String} table - The name of the table.
     * @return {Bool} True if the table exists, false otherwise.
     */
-    exists = function (table) {
-        return struct_exists(self.store, table);
+    static exists = function (_table) {
+        return struct_exists(self.store, _table);
     }
 
     /**
@@ -346,12 +401,9 @@ function gmDB () constructor {
     * @param {Struct} row - The row data to insert.
     * @return {Bool} True if insertion was successful, false otherwise.
     */
-    insert = function (table, row) {
-        var tablePointer = struct_get(self.store, table);
-        if (is_undefined(tablePointer)) {
-            return false;
-        }
-        return tablePointer.__insert(row);
+    static insert = function (_table, _row) {
+        var tablePointer = struct_get(self.store, _table);
+        return is_undefined(tablePointer) ? false : tablePointer.__insert(_row);
     }
     
     /**
@@ -361,10 +413,13 @@ function gmDB () constructor {
     * @param {String} table - The name of the table.
     * @return {Struct.gmDB$$table$$result} A result object containing the rows, or void if the table doesn't exist.
     */
-    select = function (table) {
-        if (self.exists(table)) {
-            return struct_get(self.store, table).__select();
+    static select = function (_table) {
+        if (self.exists(_table)) {
+            return struct_get(self.store, _table).__select();
         }
     }
 
 }
+
+// Initialise the static functions
+var _init = new gmDB();
